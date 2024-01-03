@@ -1,7 +1,7 @@
 Programing lenguage plp
 =========================
 
-Plp - a simple language is a programming language that contains basic functions
+Plp - a simple language that contains basic functions
 
 Syntax
 -----------

@@ -1,0 +1,6 @@
+baz: 3;
+foo: 4 + baz - 3;
+puts foo;
+baz: 2;
+puts foo + baz;
+% comment

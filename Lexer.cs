@@ -2,8 +2,6 @@ using System.Text.RegularExpressions;
 
 public class Lexer
 {
-  // private string input;
-
   private readonly Regex
     NUMBER_LITERAL = new Regex(@"[0-9]"),
     KEY_LITERAL = new Regex(@"\w"),
@@ -12,6 +10,8 @@ public class Lexer
   private List<Token> tokenList = new List<Token> { new Token(TokenType.UNDEF) };
 
   private bool canInComment;
+
+  private uint line = 1;
 
   public string Input
   {
@@ -31,7 +31,7 @@ public class Lexer
     foreach (char item in Input)
     {
       ok = AnalisisChar(item);
-      if (!ok) PlpError.Alert($"Lexer error \n\t\t '{item}' is not valid");
+      if (!ok) PlpError.Alert($"lexer error: \n\t '{item}' is not valid character");
     }
 
     filterTokenListOnUndefined();
@@ -68,6 +68,8 @@ public class Lexer
       if (tokenList[tokenList.Count - 1].Type != TokenType.UNDEF)
         tokenList.Add(new Token(TokenType.UNDEF));
 
+      if (character == '\n') line ++;
+
       return true;
     }
 
@@ -83,6 +85,9 @@ public class Lexer
       '-' => TokenListAppendOperator(TokenType.SUB),
       ':' => TokenListAppendOperator(TokenType.EQU),
       ';' => TokenListAppendOperator(TokenType.END_OF_LINE),
+      '!' => TokenListAppendOperator(TokenType.CALL),
+      '(' => TokenListAppendOperator(TokenType.OPEN_FUNCTION),
+      ')' => TokenListAppendOperator(TokenType.CLOSE_FUNCTION),
       _ => false,
     };
   }
@@ -92,7 +97,9 @@ public class Lexer
     if (tokenList[tokenList.Count - 1].Type == TokenType.UNDEF)
       tokenList[tokenList.Count - 1].Type = type;
     else
-      tokenList.Add(new Token(type));
+      if (type == TokenType.END_OF_LINE)
+        tokenList.Add(new Token(type, $"{line}"));
+      else tokenList.Add(new Token(type));
 
     return true;
   }

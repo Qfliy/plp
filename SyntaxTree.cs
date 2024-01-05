@@ -23,6 +23,21 @@ namespace SyntaxTree
     }
   }
 
+  public class VariableNode : SyntaxNode
+  {
+    private SyntaxNode value;
+
+    public VariableNode(SyntaxNode value)
+    {
+      this.value = value;
+    }
+
+    public override dynamic Evaluate()
+    {
+      return value.Evaluate();
+    }
+  }
+
   public class NumberNode : SyntaxNode
   {
     private double number;

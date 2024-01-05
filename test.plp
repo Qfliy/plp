@@ -1,6 +1,13 @@
-baz: 3;
-foo: 4 + baz - 3;
-puts foo;
-baz: 2;
-puts foo + baz;
 % comment
+
+test: 3 + 4 - 5;
+puts test; % output 2
+
+function (
+  var_x: 4;
+  puts var_x; % 4
+)
+
+!function; % call function
+
+puts var_x;

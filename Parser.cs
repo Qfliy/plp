@@ -9,7 +9,9 @@ public class Parser
 
   private int position;
 
-  private Dictionary<string, SyntaxNode> vars = new Dictionary<string, SyntaxNode> { };
+  private string line = "1";
+
+  private Dictionary<string, VariableNode> vars = new Dictionary<string, VariableNode> { };
 
   public Parser(List<Token> tokens)
   {
@@ -21,6 +23,11 @@ public class Parser
   private void Next()
   {
     position++;
+  }
+
+  private void Next(int number)
+  {
+    position += number;
   }
 
   private Token PeekList()
@@ -47,34 +54,75 @@ public class Parser
     while (position < lengthOfTokens)
       root.AddNode(ParseExpression());
 
+
+    return root;
+  }
+
+  public RootNode ParseFunction()
+  {
+    RootNode root = new RootNode();
+
+    while (!RequireThis(TokenType.CLOSE_FUNCTION))
+      root.AddNode(ParseExpression());
+
+    Next();
+
     return root;
   }
 
   private SyntaxNode ParseExpression()
   {
-    SyntaxNode node;
+    SyntaxNode node = SyntaxNode.NullReferens;
 
-    if (!RequireThis(TokenType.KEY))
-      PlpError.Alert("parsing error: \n\t firs token in string require key.");
-
-    if (RequireThis("puts"))
-      node = new PutsNode(ParsFormula());
+    if (RequireThis(TokenType.KEY))
+      if (RequireThis("puts"))
+        node = new PutsNode(ParsFormula());
+      else
+        node = ParsAppointmentVariable(PeekList().Value);
+    else if (RequireThis(TokenType.CALL))
+      node = ParsCallFunction();
     else
-      node = ParsAppointmentVariable(PeekList().Value);
+      ParserError($"firs token in line require key", true);
 
     return node;
   }
 
+  private SyntaxNode ParsCallFunction()
+  {
+    Next();
+    if (!RequireThis(TokenType.KEY))
+      ParserError($"in parsing require function name", true);
+
+    string name = PeekList().Value;
+
+    if (!vars.ContainsKey(name))
+      ParserError($"function '{name}' is not defined", false);
+
+    if (!Require(TokenType.END_OF_LINE))
+      ParserError($"in parsing require END_OF_LINE (;)", true);
+
+    Next();
+
+    return vars[name];
+  }
+
   private SyntaxNode ParsAppointmentVariable(string name)
   {
-    if (!Require(TokenType.EQU))
-      PlpError.Alert("parsing error: \n\t before variable require eq (':') operator.");
+    SyntaxNode node = SyntaxNode.NullReferens;
 
-    SyntaxNode node = ParsFormula();
+    if (Require(TokenType.EQU))
+      node = ParsFormula();
+    else if (RequireThis(TokenType.OPEN_FUNCTION))
+    {
+      Next();
+      node = ParseFunction();
+    }
+    else
+      ParserError($"before variable '{name}' require EQU (':') operator", true);
 
-    vars[name] = node;
+    vars[name] = new VariableNode(node);
 
-    return node;
+    return SyntaxNode.NullReferens;
   }
 
   private SyntaxNode ParsFormula()
@@ -89,6 +137,8 @@ public class Parser
       node = BinaryNode.FactoryBinOperators(node, ParsVariableOrNumber(), type);
     }
 
+    line = PeekList().Value;
+
     Next();
     return node;
   }
@@ -99,9 +149,7 @@ public class Parser
     bool isKey = RequireThis(TokenType.KEY);
 
     if (!(isKey || isNumber))
-      PlpError.Alert(
-        $"parsing error: \n\t in parsing require number or key, but given {PeekList().Type}"
-      );
+      ParserError($"in parsing require number or key", true);
 
     if (isNumber) return new NumberNode(int.Parse(PeekList().Value));
 
@@ -113,8 +161,19 @@ public class Parser
     string name = PeekList().Value;
 
     if (!vars.ContainsKey(name))
-      PlpError.Alert($"parsing error: \n\t var '{name}' is not defined");
+      ParserError($"var '{name}' is not defined", false);
 
     return vars[name];
   }
-};
+
+  private SyntaxNode ParserError(string alert, bool canButGivenRferens)
+  {
+    string butGivenReferens = canButGivenRferens ? $", but given {PeekList().Type}" : "";
+
+    PlpError.Alert(
+      $"parsing error: \n\t {alert}{butGivenReferens}\n on line ~{line}"
+    );
+
+    return SyntaxNode.NullReferens;
+  }
+}

@@ -1,13 +1,15 @@
 using System.Text.RegularExpressions;
 
-public class Lexer
+namespace plp;
+
+public class Lexer(string input)
 {
   private readonly Regex
-    NUMBER_LITERAL = new Regex(@"[0-9]"),
-    KEY_LITERAL = new Regex(@"\w"),
-    IGNORE_LITERAL = new Regex(@"\s");
+    NUMBER_LITERAL = new(@"[0-9]"),
+    KEY_LITERAL = new(@"\w"),
+    IGNORE_LITERAL = new(@"\s");
 
-  private List<Token> tokenList = new List<Token> { new Token(TokenType.UNDEF) };
+  private readonly List<Token> tokenList = [ new(TokenType.UNDEF) ];
 
   private bool canInComment;
 
@@ -17,12 +19,7 @@ public class Lexer
   {
     set;
     private get;
-  }
-
-  public Lexer(string program)
-  {
-    Input = program;
-  }
+  } = input;
 
   public List<Token> Analisis()
   {
@@ -34,11 +31,11 @@ public class Lexer
       if (!ok) PlpError.Alert($"lexer error: \n\t '{item}' is not valid character");
     }
 
-    filterTokenListOnUndefined();
+    FilterTokenListOnUndefined();
     return tokenList;
   }
 
-  public void filterTokenListOnUndefined()
+  private void FilterTokenListOnUndefined()
   {
     if (tokenList.Last().Type == TokenType.UNDEF)
       tokenList.RemoveAt(tokenList.Count - 1);
@@ -65,10 +62,10 @@ public class Lexer
   {
     if (IGNORE_LITERAL.IsMatch(character.ToString()))
     {
-      if (tokenList[tokenList.Count - 1].Type != TokenType.UNDEF)
+      if (tokenList[^1].Type != TokenType.UNDEF)
         tokenList.Add(new Token(TokenType.UNDEF));
 
-      if (character == '\n') line ++;
+      if (character == '\n') line++;
 
       return true;
     }
@@ -78,28 +75,28 @@ public class Lexer
 
   private bool AnalisisOperators(char character)
   {
-    return character switch
+    if (character == '%')
+      return canInComment = true;
+
+    TokenType token = TokenTable.DefoltTokenTable.Select(character);
+
+    if (token != TokenType.UNDEF)
     {
-      '%' => canInComment = true,
-      '+' => TokenListAppendOperator(TokenType.ADD),
-      '-' => TokenListAppendOperator(TokenType.SUB),
-      ':' => TokenListAppendOperator(TokenType.EQU),
-      ';' => TokenListAppendOperator(TokenType.END_OF_LINE),
-      '!' => TokenListAppendOperator(TokenType.CALL),
-      '(' => TokenListAppendOperator(TokenType.OPEN_FUNCTION),
-      ')' => TokenListAppendOperator(TokenType.CLOSE_FUNCTION),
-      _ => false,
-    };
+      TokenListAppend(token);
+      return true;
+    }
+
+    return false;
   }
 
-  private bool TokenListAppendOperator(TokenType type)
+  private bool TokenListAppend(TokenType type)
   {
-    if (tokenList[tokenList.Count - 1].Type == TokenType.UNDEF)
-      tokenList[tokenList.Count - 1].Type = type;
+    if (tokenList[^1].Type == TokenType.UNDEF)
+      tokenList[^1].Type = type;
     else
       if (type == TokenType.END_OF_LINE)
-        tokenList.Add(new Token(type, $"{line}"));
-      else tokenList.Add(new Token(type));
+      tokenList.Add(new Token(type, $"{line}"));
+    else tokenList.Add(new Token(type));
 
     return true;
   }
@@ -108,7 +105,7 @@ public class Lexer
   {
     if (!NUMBER_LITERAL.IsMatch(character.ToString())) return false;
 
-    if (tokenList[tokenList.Count - 1].Type == TokenType.KEY)
+    if (tokenList[^1].Type == TokenType.KEY)
       UpdateToken(character);
     else
       AddOrUpdateToken(character, TokenType.NUMBER);
@@ -129,7 +126,7 @@ public class Lexer
 
   private void AddOrUpdateToken(char character, TokenType type)
   {
-    if (tokenList[tokenList.Count - 1].IsType(type))
+    if (tokenList[^1].IsType(type))
       UpdateToken(character);
     else
       tokenList.Add(new Token(type, character.ToString()));
@@ -137,6 +134,6 @@ public class Lexer
 
   private void UpdateToken(char character)
   {
-    tokenList[tokenList.Count - 1].Value += character;
+    tokenList[^1].Value += character;
   }
 }

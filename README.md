@@ -8,26 +8,28 @@ varsion: alfa-2.0
 What's new
 -------
 
-- function
-- better error messages
+- priorety for ```()``` new operators
+- the code became cleaner
 
 Syntax
 -----------
 
-```hs
+```erl
 % comment
+foo: 3;
+test: 10 - (4 + foo);
 
-test: 3 + 4 - 5;
-puts test; % output 2
+puts test; % output 3
 
-function (
+function {
   var_x: 4;
   puts var_x; % 4
-)
+}
 
 !function; % call function
 
-puts var_x;
+puts var_x; % 4
+
 ```
 
 Run Program

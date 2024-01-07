@@ -1,24 +1,19 @@
 
 using SyntaxTree;
 
-public class Parser
+namespace plp;
+
+public class Parser(List<Token> tokens)
 {
-  private List<Token> tokenList;
+  private readonly List<Token> tokenList = tokens;
 
-  private int lengthOfTokens;
+  private readonly int lengthOfTokens = tokens.Count;
 
-  private int position;
+  private int position = 0;
 
   private string line = "1";
 
-  private Dictionary<string, VariableNode> vars = new Dictionary<string, VariableNode> { };
-
-  public Parser(List<Token> tokens)
-  {
-    tokenList = tokens;
-    position = 0;
-    lengthOfTokens = tokens.Count;
-  }
+  private readonly Dictionary<string, VariableNode> vars = [];
 
   private void Next()
   {
@@ -39,6 +34,7 @@ public class Parser
   }
 
   private bool RequireThis(TokenType type) => PeekList().Type == type;
+
   private bool RequireThis(string value) => PeekList().Value == value;
 
   private bool Require(TokenType type)
@@ -49,7 +45,7 @@ public class Parser
 
   public RootNode ParseCode()
   {
-    RootNode root = new RootNode();
+    RootNode root = new();
 
     while (position < lengthOfTokens)
       root.AddNode(ParseExpression());
@@ -58,9 +54,9 @@ public class Parser
     return root;
   }
 
-  public RootNode ParseFunction()
+  private RootNode ParseFunction()
   {
-    RootNode root = new RootNode();
+    RootNode root = new();
 
     while (!RequireThis(TokenType.CLOSE_FUNCTION))
       root.AddNode(ParseExpression());
@@ -87,7 +83,7 @@ public class Parser
     return node;
   }
 
-  private SyntaxNode ParsCallFunction()
+  private VariableNode ParsCallFunction()
   {
     Next();
     if (!RequireThis(TokenType.KEY))
@@ -120,22 +116,14 @@ public class Parser
     else
       ParserError($"before variable '{name}' require EQU (':') operator", true);
 
-    vars[name] = new VariableNode(node);
+    vars[name] = new(node);
 
     return SyntaxNode.NullReferens;
   }
 
   private SyntaxNode ParsFormula()
   {
-    Next();
-    SyntaxNode node = ParsVariableOrNumber();
-
-    while (!Require(TokenType.END_OF_LINE))
-    {
-      var type = PeekList().Type; Next();
-
-      node = BinaryNode.FactoryBinOperators(node, ParsVariableOrNumber(), type);
-    }
+    SyntaxNode node = MathPars(TokenType.END_OF_LINE);
 
     line = PeekList().Value;
 
@@ -143,20 +131,40 @@ public class Parser
     return node;
   }
 
+  private SyntaxNode ParsPriorityFromula() => MathPars(TokenType.CLOSE_EXSPRESSION);
+
+  private SyntaxNode MathPars(TokenType endType)
+  {
+    Next();
+    SyntaxNode node = ParsVariableOrNumber();
+
+    while (!Require(endType)) // -todo pars priority formula
+    {
+      TokenType type = PeekList().Type;
+      Next();
+
+      node = BinaryNode.FactoryBinOperators(node, ParsVariableOrNumber(), type);
+    }
+
+    return node;
+  }
+
   private SyntaxNode ParsVariableOrNumber()
   {
     bool isNumber = RequireThis(TokenType.NUMBER);
     bool isKey = RequireThis(TokenType.KEY);
+    bool isPriority = RequireThis(TokenType.OPEN_EXPRESSION);
 
-    if (!(isKey || isNumber))
-      ParserError($"in parsing require number or key", true);
+    if (!(isKey || isNumber || isPriority))
+      ParserError($"in parsing require number or key or priority expression", true);
 
     if (isNumber) return new NumberNode(int.Parse(PeekList().Value));
+    if (isPriority) return ParsPriorityFromula();
 
     return ParsVariable();
   }
 
-  private SyntaxNode ParsVariable()
+  private VariableNode ParsVariable()
   {
     string name = PeekList().Value;
 

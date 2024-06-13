@@ -3,7 +3,7 @@ Programing language plp
 
 **Plp** is a *programming language* that contains basic functions
 
-varsion: alfa-2.5
+version: alfa-2.5
 
 What's new
 -------

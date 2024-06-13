@@ -1,4 +1,4 @@
-Programing lenguage plp
+Programing language plp
 =========================
 
 **Plp** is a *programming language* that contains basic functions
